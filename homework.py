@@ -40,7 +40,15 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверяет доступность переменных окружения."""
-    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
+    tokens = {
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID,
+    }
+    missing_tokens = [name for name, value in tokens.items() if not value]
+    for token in missing_tokens:
+        logger.critical(f'Отсутствует переменная окружения: {token}')
+    return not missing_tokens
 
 
 def get_api_answer(timestamp):
@@ -67,39 +75,36 @@ def check_response(response):
     из урока «API сервиса Практикум Домашка».
     """
     if not isinstance(response, dict):
-        message = (f'Неожиданный формат ответа: {type(response)}\n'
-                   f'Сообщение: {response}')
-        raise TypeError(message)
+        raise TypeError(
+            f'Неожиданный формат ответа: {type(response)}\n'
+            f'Сообщение: {response}'
+        )
     if 'homeworks' not in response:
         raise KeyError('В ответе нет ключа "homeworks"')
-    homeworks = response.get('homeworks')
-    if not isinstance(response.get("homeworks"), list):
-        raise TypeError(
-            f'Формат ответа не список,'
-            f'получен {type(response.get("homeworks"))}.'
-        )
+    homeworks = response['homeworks']
+    if not isinstance(homeworks, list):
+        raise TypeError(f'Формат ответа не список, получен {type(homeworks)}.')
     return homeworks
 
 
 def parse_status(homework):
-    """Извлекает из информации о конкретной домашней работе ее статус."""
-    missing_keys = []
+    """Извлекает из информации о конкретной домашней работе её статус."""
     if 'homework_name' not in homework:
-        missing_keys.append('homework_name')
+        raise KeyError('Отсутствует ключ "homework_name" в ответе API')
     if 'status' not in homework:
-        missing_keys.append('status')
-    if missing_keys != []:
-        raise KeyError('Отсутствует ключ/ключи:'
-                       f'{(key for key in missing_keys)} в ответе API')
+        raise KeyError('Отсутствует ключ "status" в ответе API')
+
     homework_name = homework['homework_name']
     status = homework['status']
+
     if status not in HOMEWORK_VERDICTS:
         raise HomeworkVerdictNotFound(
-            'Неизвестный статус домашней работы {status}.'
-            'Бот работает со следующими статусами:'
-            f'{HOMEWORK_VERDICTS.keys()}.'
+            'Неизвестный статус домашней работы "{status}". '
+            'Бот работает со следующими статусами: '
+            f'{", ".join(HOMEWORK_VERDICTS.keys())}.'
         )
-    verdict = HOMEWORK_VERDICTS.get(status)
+
+    verdict = HOMEWORK_VERDICTS[status]
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
@@ -115,7 +120,7 @@ def send_message(bot, message):
         logger.debug(f'Сообщение отправлено: {message}')
 
 
-def main(): # noqa
+def main():  # noqa
     """Основная логика работы бота."""
     if not check_tokens():
         logger.critical('Отсутствует хотя бы одна переменная окружения')
