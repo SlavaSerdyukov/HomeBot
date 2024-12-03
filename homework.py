@@ -12,7 +12,6 @@ import requests
 from exceptions import (
     CustomAPIResponseError,
     HomeworkVerdictNotFound,
-    NotForSendingError,
     TelegramError,
     JSONDecodeError)
 
