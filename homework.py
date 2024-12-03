@@ -125,36 +125,33 @@ def main():  # noqa
     if not check_tokens():
         logger.critical('Отсутствует хотя бы одна переменная окружения')
         sys.exit('Аварийный выход, ошибка!')
+
     logger.debug('Переменные окружения доступны')
     # Создаем объект класса бота
     bot = TeleBot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
+
     while True:
         try:
             response = get_api_answer(timestamp)
             homeworks = check_response(response)
-            # Обновление timestamp для следующего запроса
             timestamp = response.get('current_date', timestamp)
-            # Если новых статусов нет, отправляем сообщение об этом
             if not homeworks:
                 message = 'Нет новых статусов домашних работ.'
                 logger.info(message)
             else:
-                message = parse_status(check_response(response)[0])
+                message = parse_status(homeworks[0])
                 send_message(bot, message)
                 logger.info(message)
-        except NotForSendingError as error:
-            message = (
-                f'Сбой в работе программы,'
-                f'не отправленные в телегу: {error}'
-            )
+
+        except Exception as error:
+            message = f'Сбой в работе программы: {error}'
             logger.error(message)
-        except Exception:
             try:
                 send_message(bot, message)
-            except TelegramError as error:
-                message = f'Не удалось отправить в телегу: {error}'
-                logger.error(message)
+            except TelegramError as tg_error:
+                logger.error(
+                    f'Не удалось отправить сообщение в телегу: {tg_error}')
         finally:
             time.sleep(RETRY_PERIOD)
 
